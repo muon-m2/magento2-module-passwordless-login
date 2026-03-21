@@ -1,0 +1,51 @@
+<?php
+/** @var \Magento\Framework\View\Element\Template $block */
+?>
+<div class="login-container">
+    <div class="block block-customer-login">
+        <div class="block-title">
+            <strong id="block-passwordless-login-heading" role="heading" aria-level="2">
+                <?= $escaper->escapeHtml(__('Login Without Password')) ?>
+            </strong>
+        </div>
+        <div class="block-content" aria-labelledby="block-passwordless-login-heading">
+            <p><?= $escaper->escapeHtml(__('Enter your email address and we will send you a one-time login link.'))
+            ?></p>
+            <form class="form form-passwordless-login"
+                  action="<?= $escaper->escapeUrl($block->getUrl('passwordlesslogin/login/post')) ?>"
+                  method="post"
+                  id="passwordless-login-form">
+                <?= $block->getBlockHtml('formkey') ?>
+                <fieldset class="fieldset login">
+                    <div class="field email required">
+                        <label class="label" for="passwordless-email">
+                            <span><?= $escaper->escapeHtml(__('Email Address')) ?></span>
+                        </label>
+                        <div class="control">
+                            <input class="input-text"
+                                   type="email"
+                                   name="email"
+                                   id="passwordless-email"
+                                   autocomplete="email"
+                                   required
+                                   aria-required="true">
+                        </div>
+                    </div>
+                    <div class="actions-toolbar">
+                        <div class="primary">
+                            <button type="submit" class="action login primary">
+                                <span><?= $escaper->escapeHtml(__('Send Login Link')) ?></span>
+                            </button>
+                        </div>
+                        <div class="secondary">
+                            <a class="action"
+                               href="<?= $escaper->escapeUrl($block->getUrl('customer/account/login')) ?>">
+                                <?= $escaper->escapeHtml(__('Login with password instead')) ?>
+                            </a>
+                        </div>
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+    </div>
+</div>

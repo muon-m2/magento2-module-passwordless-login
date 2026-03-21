@@ -1,0 +1,20 @@
+{
+    "muon_passwordless_login_token": {
+        "column": {
+            "token_id": true,
+            "customer_id": true,
+            "token": true,
+            "expires_at": true,
+            "used_at": true,
+            "created_at": true
+        },
+        "index": {
+            "MUON_PASSWORDLESS_LOGIN_TOKEN_CUSTOMER_ID_CREATED_AT": true,
+            "MUON_PASSWORDLESS_LOGIN_TOKEN_EXPIRES_AT": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "MUON_PASSWORDLESS_LOGIN_TOKEN_TOKEN": true
+        }
+    }
+}

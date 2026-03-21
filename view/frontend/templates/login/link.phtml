@@ -1,0 +1,7 @@
+<?php
+/** @var \Magento\Framework\View\Element\Template $block */
+?>
+<a class="action passwordless-login"
+   href="<?= $escaper->escapeUrl($block->getUrl('passwordlesslogin/login/request')) ?>">
+    <span><?= $escaper->escapeHtml(__('Login without password')) ?></span>
+</a>

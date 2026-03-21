@@ -1,0 +1,118 @@
+# GitHub Actions CI for a standalone Magento 2 module.
+#
+# Runs on every push and pull request to main.
+# Does NOT require Magento repo credentials for the static analysis jobs.
+# Unit tests are disabled by default — see the "unit-tests" job below for
+# instructions on enabling them with Magento repo auth.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Static Analysis ─────────────────────────────────────────────────────────
+  # Installs only open-source QA tools (no Magento repo credentials needed).
+  static-analysis:
+    name: Static Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: intl, zip, bcmath, soap
+          tools: composer:v2
+          coverage: none
+
+      # Validate the module's own composer.json (no install needed).
+      - name: Validate composer.json
+        run: composer validate --strict --no-check-publish
+
+      # Install QA tools in an isolated directory so we don't try to resolve
+      # magento/framework (which requires repo.magento.com credentials).
+      - name: Install QA tools
+        run: |
+          mkdir -p /tmp/qa-tools
+          cat > /tmp/qa-tools/composer.json << 'EOF'
+          {
+            "require": {
+              "magento/magento-coding-standard": ">=28",
+              "phpmd/phpmd": "^2.15"
+            },
+            "config": {
+              "allow-plugins": {
+                "dealerdirect/phpcodesniffer-composer-installer": true
+              }
+            }
+          }
+          EOF
+          composer install \
+            --working-dir=/tmp/qa-tools \
+            --no-progress \
+            --prefer-dist \
+            --no-interaction
+
+      - name: PHP CodeSniffer (Magento2 standard)
+        run: |
+          /tmp/qa-tools/vendor/bin/phpcs \
+            --standard=Magento2 \
+            --extensions=php \
+            --ignore=vendor/ \
+            .
+
+      - name: PHPMD
+        run: |
+          /tmp/qa-tools/vendor/bin/phpmd . ansi \
+            cleancode,codesize,design,naming,unusedcode \
+            --exclude vendor/
+
+  # ── Unit Tests ──────────────────────────────────────────────────────────────
+  # Disabled by default because Magento framework classes are required at
+  # runtime and magento/framework lives behind repo.magento.com authentication.
+  #
+  # To enable:
+  #   1. Add a GitHub Actions secret named MAGENTO_COMPOSER_AUTH containing
+  #      your repo.magento.com credentials:
+  #        {"http-basic":{"repo.magento.com":{"username":"<pub-key>","password":"<priv-key>"}}}
+  #   2. Uncomment the job below.
+  #   3. Add require-dev to the module's composer.json:
+  #        "require-dev": {
+  #            "magento/magento2-base": "^2.4",
+  #            "phpunit/phpunit": "^10.5"
+  #        }
+  #
+  # unit-tests:
+  #   name: Unit Tests
+  #   runs-on: ubuntu-latest
+  #   needs: static-analysis
+  #
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Set up PHP 8.3
+  #       uses: shivammathur/setup-php@v2
+  #       with:
+  #         php-version: '8.3'
+  #         extensions: intl, zip, bcmath, soap
+  #         tools: composer:v2
+  #         coverage: none
+  #
+  #     - name: Configure Magento repo credentials
+  #       run: composer config -g http-basic.repo.magento.com \
+  #              "${{ secrets.MAGENTO_COMPOSER_AUTH_USER }}" \
+  #              "${{ secrets.MAGENTO_COMPOSER_AUTH_PASS }}"
+  #
+  #     - name: Install dependencies
+  #       run: composer install --no-progress --prefer-dist --no-interaction
+  #
+  #     - name: Run unit tests
+  #       run: vendor/bin/phpunit --testsuite unit

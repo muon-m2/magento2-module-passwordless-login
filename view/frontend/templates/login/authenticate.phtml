@@ -1,0 +1,35 @@
+<?php
+/** @var \Magento\Framework\View\Element\Template $block */
+?>
+<div class="login-container">
+    <div class="block block-customer-login">
+        <div class="block-title">
+            <strong role="heading" aria-level="2">
+                <?= $escaper->escapeHtml(__('Confirm Sign In')) ?>
+            </strong>
+        </div>
+        <div class="block-content">
+            <p><?= $escaper->escapeHtml(__('Click the button below to complete your sign in.')) ?></p>
+            <form method="post"
+                  class="form-passwordless-confirm"
+                  action="<?= $escaper->escapeUrl($block->getUrl('passwordlesslogin/login/authenticatePost')) ?>">
+                <?= $block->getBlockHtml('formkey') ?>
+                <input type="hidden" name="token"
+                       value="<?= $escaper->escapeHtmlAttr((string)$block->getRequest()->getParam('token')) ?>">
+                <div class="actions-toolbar">
+                    <div class="primary">
+                        <button type="submit" class="action login primary">
+                            <span><?= $escaper->escapeHtml(__('Sign In')) ?></span>
+                        </button>
+                    </div>
+                    <div class="secondary">
+                        <a class="action passwordless-login secondary"
+                           href="<?= $escaper->escapeUrl($block->getUrl('passwordlesslogin/login/request')) ?>">
+                            <span><?= $escaper->escapeHtml(__('Request a new link')) ?></span>
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
