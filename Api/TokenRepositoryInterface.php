@@ -38,6 +38,30 @@ interface TokenRepositoryInterface
     public function countRecentByCustomerId(int $customerId, string $since): int;
 
     /**
+     * Atomically mark a token as used if it has not yet been consumed.
+     *
+     * Returns true when exactly one row was updated (the token was successfully consumed).
+     * Returns false when the token was already consumed or does not exist (race condition).
+     *
+     * @param string $tokenHash SHA-256 hash of the raw token
+     * @param string $usedAt    MySQL datetime string (Y-m-d H:i:s) to record as consumption time
+     * @return bool
+     */
+    public function consumeToken(string $tokenHash, string $usedAt): bool;
+
+    /**
+     * Delete all unused (not yet consumed) tokens for the given customer.
+     *
+     * Called before issuing a new token so that previously issued, still-valid links
+     * cannot be replayed after the customer requests a replacement.
+     *
+     * @param int $customerId
+     * @return void
+     * @throws \Magento\Framework\Exception\CouldNotDeleteException
+     */
+    public function deleteUnusedByCustomerId(int $customerId): void;
+
+    /**
      * Delete all expired tokens and all consumed tokens.
      *
      * @return void

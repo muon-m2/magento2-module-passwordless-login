@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Muon\PasswordlessLogin\Model;
 
+use DateTimeImmutable;
+use DateTimeZone;
 use Magento\Customer\Api\AccountManagementInterface;
 use Magento\Customer\Api\CustomerRepositoryInterface;
 use Magento\Customer\Api\Data\CustomerInterface;
@@ -28,6 +30,9 @@ use Psr\Log\LoggerInterface;
 class MagicLinkService implements MagicLinkServiceInterface
 {
     private const EMAIL_TEMPLATE_ID = 'muon_passwordlesslogin_magic_link';
+
+    /** Number of seconds in the rate-limit sliding window (1 hour). */
+    private const RATE_LIMIT_WINDOW_SECONDS = 3600;
 
     /**
      * @param \Magento\Customer\Api\CustomerRepositoryInterface    $customerRepository
@@ -78,18 +83,27 @@ class MagicLinkService implements MagicLinkServiceInterface
             return;
         }
 
-        $since = $this->dateTime->gmtDate('Y-m-d H:i:s', strtotime('-1 hour'));
-        $recentCount = $this->tokenRepository->countRecentByCustomerId((int)$customer->getId(), $since);
+        $windowStart = $this->dateTime->gmtDate(
+            'Y-m-d H:i:s',
+            time() - self::RATE_LIMIT_WINDOW_SECONDS
+        );
+        $recentCount = $this->tokenRepository->countRecentByCustomerId((int)$customer->getId(), $windowStart);
 
         if ($recentCount >= $this->config->getMaxAttempts()) {
             // Silent fail — do not reveal rate limit status
             return;
         }
 
+        // Invalidate any outstanding unused tokens before issuing a new one, so that
+        // previously delivered links cannot be replayed after this request.
+        $this->tokenRepository->deleteUnusedByCustomerId((int)$customer->getId());
+
         $rawToken = bin2hex(random_bytes(32));
         $hashedToken = hash('sha256', $rawToken);
         $lifetime = $this->config->getTokenLifetime();
-        $expiresAt = $this->dateTime->gmtDate('Y-m-d H:i:s', strtotime('+' . $lifetime . ' minutes'));
+        $expiresAt = (new DateTimeImmutable('now', new DateTimeZone('UTC')))
+            ->modify("+{$lifetime} minutes")
+            ->format('Y-m-d H:i:s');
 
         $token = $this->tokenFactory->create();
         $token->setCustomerId((int)$customer->getId());
@@ -127,7 +141,16 @@ class MagicLinkService implements MagicLinkServiceInterface
 
         $now = $this->dateTime->gmtDate('Y-m-d H:i:s');
 
+        // Fast-fail on expiry or already-consumed without a DB write.
         if ($token->getExpiresAt() < $now || $token->getUsedAt() !== null) {
+            throw new LocalizedException(
+                __('The login link is invalid or has expired. Please request a new one.'),
+            );
+        }
+
+        // Atomically mark the token as consumed. A false return means another concurrent
+        // request consumed it between our load and this UPDATE (TOCTOU race condition).
+        if (!$this->tokenRepository->consumeToken($hashedToken, $now)) {
             throw new LocalizedException(
                 __('The login link is invalid or has expired. Please request a new one.'),
             );
@@ -148,9 +171,6 @@ class MagicLinkService implements MagicLinkServiceInterface
                 __('This account is temporarily locked. Please try again later.'),
             );
         }
-
-        $token->setUsedAt($now);
-        $this->tokenRepository->save($token);
 
         return $customer;
     }
@@ -191,7 +211,7 @@ class MagicLinkService implements MagicLinkServiceInterface
         } catch (\Exception $e) {
             $this->logger->error(
                 'Muon_PasswordlessLogin: failed to send magic link email.',
-                ['exception' => $e, 'email' => $email],
+                ['exception' => $e, 'email_hash' => hash('sha256', $email)],
             );
             throw new LocalizedException(__('Unable to send the login link. Please try again later.'), $e);
         }

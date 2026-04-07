@@ -106,6 +106,8 @@ interface TokenInterface
     /**
      * Set the token creation datetime string.
      *
+     * @internal The database sets this column automatically via CURRENT_TIMESTAMP.
+     *           This setter exists only for framework hydration and must not be called by application code.
      * @param string $createdAt
      * @return $this
      */

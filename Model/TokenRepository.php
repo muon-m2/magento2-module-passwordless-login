@@ -83,6 +83,58 @@ class TokenRepository implements TokenRepositoryInterface
     }
 
     /**
+     * Atomically mark a token as used if it has not yet been consumed.
+     *
+     * @param string $tokenHash SHA-256 hash of the raw token
+     * @param string $usedAt    MySQL datetime string (Y-m-d H:i:s)
+     * @return bool
+     */
+    public function consumeToken(string $tokenHash, string $usedAt): bool
+    {
+        $connection = $this->resource->getConnection();
+        $tableName  = $this->resource->getMainTable();
+
+        $affectedRows = $connection->update(
+            $tableName,
+            [TokenInterface::USED_AT => $usedAt],
+            [
+                TokenInterface::TOKEN . ' = ?' => $tokenHash,
+                'used_at IS NULL',
+            ]
+        );
+
+        return $affectedRows > 0;
+    }
+
+    /**
+     * Delete all unused (not yet consumed) tokens for the given customer.
+     *
+     * @param int $customerId
+     * @return void
+     * @throws \Magento\Framework\Exception\CouldNotDeleteException
+     */
+    public function deleteUnusedByCustomerId(int $customerId): void
+    {
+        try {
+            $connection = $this->resource->getConnection();
+            $tableName  = $this->resource->getMainTable();
+
+            $connection->delete(
+                $tableName,
+                [
+                    TokenInterface::CUSTOMER_ID . ' = ?' => $customerId,
+                    'used_at IS NULL',
+                ]
+            );
+        } catch (\Exception $e) {
+            throw new CouldNotDeleteException(
+                __('Could not delete unused tokens: %1', $e->getMessage()),
+                $e
+            );
+        }
+    }
+
+    /**
      * Delete all expired tokens and all consumed tokens.
      *
      * @return void
@@ -95,8 +147,10 @@ class TokenRepository implements TokenRepositoryInterface
             $tableName  = $this->resource->getMainTable();
             $now        = $this->dateTime->gmtDate('Y-m-d H:i:s');
 
-            $connection->delete($tableName, ['expires_at < ?' => $now]);
-            $connection->delete($tableName, 'used_at IS NOT NULL');
+            $connection->delete(
+                $tableName,
+                '(expires_at < ' . $connection->quote($now) . ' OR used_at IS NOT NULL)'
+            );
         } catch (\Exception $e) {
             throw new CouldNotDeleteException(__('Could not delete expired tokens: %1', $e->getMessage()), $e);
         }

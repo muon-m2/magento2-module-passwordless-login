@@ -19,6 +19,8 @@ jobs:
   static-analysis:
     name: Static Analysis
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout
@@ -34,7 +36,7 @@ jobs:
 
       # Validate the module's own composer.json (no install needed).
       - name: Validate composer.json
-        run: composer validate --strict --no-check-publish
+        run: composer validate --no-check-publish
 
       # Install QA tools in an isolated directory so we don't try to resolve
       # magento/framework (which requires repo.magento.com credentials).

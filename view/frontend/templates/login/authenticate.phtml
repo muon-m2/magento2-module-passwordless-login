@@ -1,5 +1,7 @@
 <?php
 /** @var \Magento\Framework\View\Element\Template $block */
+/** @var \Muon\PasswordlessLogin\ViewModel\AuthenticateViewModel $viewModel */
+$viewModel = $block->getData('view_model');
 ?>
 <div class="login-container">
     <div class="block block-customer-login">
@@ -12,10 +14,10 @@
             <p><?= $escaper->escapeHtml(__('Click the button below to complete your sign in.')) ?></p>
             <form method="post"
                   class="form-passwordless-confirm"
-                  action="<?= $escaper->escapeUrl($block->getUrl('passwordlesslogin/login/authenticatePost')) ?>">
+                  action="<?= $escaper->escapeUrl($block->getUrl('passwordlesslogin/login/authenticate_post')) ?>">
                 <?= $block->getBlockHtml('formkey') ?>
                 <input type="hidden" name="token"
-                       value="<?= $escaper->escapeHtmlAttr((string)$block->getRequest()->getParam('token')) ?>">
+                       value="<?= $escaper->escapeHtmlAttr($viewModel->getToken()) ?>">
                 <div class="actions-toolbar">
                     <div class="primary">
                         <button type="submit" class="action login primary">

@@ -152,6 +152,7 @@ class MagicLinkServiceTest extends TestCase
         $this->customerRepository->method('get')->willReturn($customer);
 
         $this->tokenRepository->method('countRecentByCustomerId')->willReturn(0);
+        $this->tokenRepository->expects($this->once())->method('deleteUnusedByCustomerId')->with(42);
 
         $token = $this->createMock(Token::class);
         $this->tokenFactory->method('create')->willReturn($token);
@@ -210,6 +211,7 @@ class MagicLinkServiceTest extends TestCase
         $token->method('getUsedAt')->willReturn(null);
         $token->method('getCustomerId')->willReturn(42);
         $this->tokenRepository->method('getByToken')->willReturn($token);
+        $this->tokenRepository->method('consumeToken')->willReturn(true);
 
         $customer = $this->createMock(CustomerInterface::class);
         $this->customerRepository->method('getById')->willReturn($customer);
@@ -223,6 +225,21 @@ class MagicLinkServiceTest extends TestCase
         $this->subject->authenticate('some-raw-token');
     }
 
+    public function testAuthenticateThrowsWhenConsumeTokenFailsDueToRaceCondition(): void
+    {
+        $this->dateTime->method('gmtDate')->willReturn('2026-03-13 10:00:00');
+
+        $token = $this->createMock(Token::class);
+        $token->method('getExpiresAt')->willReturn('2026-03-13 11:00:00');
+        $token->method('getUsedAt')->willReturn(null);
+        $this->tokenRepository->method('getByToken')->willReturn($token);
+        // Simulate race: another request already consumed this token
+        $this->tokenRepository->method('consumeToken')->willReturn(false);
+
+        $this->expectException(LocalizedException::class);
+        $this->subject->authenticate('some-raw-token');
+    }
+
     public function testAuthenticateConsumesTokenAndReturnsCustomer(): void
     {
         $this->dateTime->method('gmtDate')->willReturn('2026-03-13 10:00:00');
@@ -231,9 +248,13 @@ class MagicLinkServiceTest extends TestCase
         $token->method('getExpiresAt')->willReturn('2026-03-13 11:00:00');
         $token->method('getUsedAt')->willReturn(null);
         $token->method('getCustomerId')->willReturn(42);
-        $token->expects($this->once())->method('setUsedAt')->with('2026-03-13 10:00:00')->willReturnSelf();
         $this->tokenRepository->method('getByToken')->willReturn($token);
-        $this->tokenRepository->expects($this->once())->method('save')->with($token);
+        $this->tokenRepository
+            ->expects($this->once())
+            ->method('consumeToken')
+            ->with(self::isType('string'), '2026-03-13 10:00:00')
+            ->willReturn(true);
+        $this->tokenRepository->expects($this->never())->method('save');
 
         $customer = $this->createMock(CustomerInterface::class);
         $this->customerRepository->method('getById')->willReturn($customer);

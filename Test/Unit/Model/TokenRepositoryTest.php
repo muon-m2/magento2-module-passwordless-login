@@ -108,4 +108,38 @@ class TokenRepositoryTest extends TestCase
 
         self::assertSame(3, $result);
     }
+
+    public function testConsumeTokenReturnsTrueWhenRowUpdated(): void
+    {
+        $connection = $this->createMock(\Magento\Framework\DB\Adapter\AdapterInterface::class);
+        $connection->method('update')->willReturn(1);
+        $this->resource->method('getConnection')->willReturn($connection);
+        $this->resource->method('getMainTable')->willReturn('muon_passwordless_login_token');
+
+        $result = $this->subject->consumeToken('abc123hash', '2026-03-13 10:00:00');
+
+        self::assertTrue($result);
+    }
+
+    public function testConsumeTokenReturnsFalseWhenNoRowsAffected(): void
+    {
+        $connection = $this->createMock(\Magento\Framework\DB\Adapter\AdapterInterface::class);
+        $connection->method('update')->willReturn(0);
+        $this->resource->method('getConnection')->willReturn($connection);
+        $this->resource->method('getMainTable')->willReturn('muon_passwordless_login_token');
+
+        $result = $this->subject->consumeToken('abc123hash', '2026-03-13 10:00:00');
+
+        self::assertFalse($result);
+    }
+
+    public function testDeleteUnusedByCustomerIdCallsConnectionDelete(): void
+    {
+        $connection = $this->createMock(\Magento\Framework\DB\Adapter\AdapterInterface::class);
+        $connection->expects($this->once())->method('delete');
+        $this->resource->method('getConnection')->willReturn($connection);
+        $this->resource->method('getMainTable')->willReturn('muon_passwordless_login_token');
+
+        $this->subject->deleteUnusedByCustomerId(42);
+    }
 }

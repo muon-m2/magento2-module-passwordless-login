@@ -73,8 +73,16 @@ class AuthenticatePost implements HttpPostActionInterface
             return $redirect->setPath('passwordlesslogin/login/request');
         }
 
-        $this->customerSession->loginById($customer->getId());
-        $this->customerSession->regenerateId();
+        try {
+            $this->customerSession->loginById($customer->getId());
+            $this->customerSession->regenerateId();
+        } catch (\Exception $e) {
+            $this->messageManager->addErrorMessage(
+                __('An error occurred while signing you in. Please request a new login link.'),
+            );
+
+            return $redirect->setPath('passwordlesslogin/login/request');
+        }
 
         return $redirect->setPath('customer/account');
     }
