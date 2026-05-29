@@ -14,7 +14,7 @@ $viewModel = $block->getData('view_model');
             <p><?= $escaper->escapeHtml(__('Click the button below to complete your sign in.')) ?></p>
             <form method="post"
                   class="form-passwordless-confirm"
-                  action="<?= $escaper->escapeUrl($block->getUrl('passwordlesslogin/login/authenticate_post')) ?>">
+                  action="<?= $escaper->escapeUrl($block->getUrl('passwordlesslogin/login/authenticatePost')) ?>">
                 <?= $block->getBlockHtml('formkey') ?>
                 <input type="hidden" name="token"
                        value="<?= $escaper->escapeHtmlAttr($viewModel->getToken()) ?>">
