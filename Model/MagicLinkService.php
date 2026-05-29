@@ -94,9 +94,10 @@ class MagicLinkService implements MagicLinkServiceInterface
             return;
         }
 
-        // Invalidate any outstanding unused tokens before issuing a new one, so that
-        // previously delivered links cannot be replayed after this request.
-        $this->tokenRepository->deleteUnusedByCustomerId((int)$customer->getId());
+        // Invalidate any outstanding unused tokens before issuing a new one, so previously
+        // delivered links cannot be replayed. Marked as consumed (not deleted) so the rows
+        // still count toward the per-hour rate limit, which keys on created_at (H-1).
+        $this->tokenRepository->markSupersededByCustomerId((int)$customer->getId());
 
         $rawToken = bin2hex(random_bytes(32));
         $hashedToken = hash('sha256', $rawToken);

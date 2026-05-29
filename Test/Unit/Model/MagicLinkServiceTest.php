@@ -152,7 +152,7 @@ class MagicLinkServiceTest extends TestCase
         $this->customerRepository->method('get')->willReturn($customer);
 
         $this->tokenRepository->method('countRecentByCustomerId')->willReturn(0);
-        $this->tokenRepository->expects($this->once())->method('deleteUnusedByCustomerId')->with(42);
+        $this->tokenRepository->expects($this->once())->method('markSupersededByCustomerId')->with(42);
 
         $token = $this->createMock(Token::class);
         $this->tokenFactory->method('create')->willReturn($token);
@@ -267,5 +267,45 @@ class MagicLinkServiceTest extends TestCase
         $result = $this->subject->authenticate('some-raw-token');
 
         self::assertSame($customer, $result);
+    }
+
+    public function testRegressionSupersedesInsteadOfDeletingToPreserveRateLimit(): void
+    {
+        $this->config->method('isEnabled')->willReturn(true);
+        $this->config->method('getMaxAttempts')->willReturn(5);
+        $this->config->method('getTokenLifetime')->willReturn(15);
+        $this->dateTime->method('gmtDate')->willReturn('2026-05-29 10:00:00');
+
+        $customer = $this->createMock(CustomerInterface::class);
+        $customer->method('getId')->willReturn('42');
+        $customer->method('getFirstname')->willReturn('Jane');
+        $this->customerRepository->method('get')->willReturn($customer);
+        $this->tokenRepository->method('countRecentByCustomerId')->willReturn(0);
+
+        $token = $this->createMock(Token::class);
+        $token->method('setCustomerId')->willReturnSelf();
+        $token->method('setToken')->willReturnSelf();
+        $token->method('setExpiresAt')->willReturnSelf();
+        $this->tokenFactory->method('create')->willReturn($token);
+
+        $store = $this->createMock(StoreInterface::class);
+        $store->method('getId')->willReturn(1);
+        $this->storeManager->method('getStore')->willReturn($store);
+        $this->url->method('getUrl')->willReturn('https://example.com/passwordlesslogin/login/authenticate?token=abc');
+
+        $transport = $this->createMock(TransportInterface::class);
+        $this->transportBuilder->method('setTemplateIdentifier')->willReturnSelf();
+        $this->transportBuilder->method('setTemplateOptions')->willReturnSelf();
+        $this->transportBuilder->method('setTemplateVars')->willReturnSelf();
+        $this->transportBuilder->method('setFromByScope')->willReturnSelf();
+        $this->transportBuilder->method('addTo')->willReturnSelf();
+        $this->transportBuilder->method('getTransport')->willReturn($transport);
+
+        // Outstanding links must be invalidated by marking them consumed, NOT by deleting
+        // the rows the per-hour rate limiter counts (H-1).
+        $this->tokenRepository->expects($this->once())->method('markSupersededByCustomerId')->with(42);
+        $this->tokenRepository->expects($this->never())->method('deleteUnusedByCustomerId');
+
+        $this->subject->sendLink('customer@example.com');
     }
 }

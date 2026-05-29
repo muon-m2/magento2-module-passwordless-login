@@ -142,4 +142,22 @@ class TokenRepositoryTest extends TestCase
 
         $this->subject->deleteUnusedByCustomerId(42);
     }
+
+    public function testMarkSupersededByCustomerIdStampsUsedAtOnUnusedRows(): void
+    {
+        $connection = $this->createMock(\Magento\Framework\DB\Adapter\AdapterInterface::class);
+        $connection->expects($this->once())
+            ->method('update')
+            ->with(
+                'muon_passwordless_login_token',
+                self::callback(static fn (array $bind): bool => ($bind['used_at'] ?? null) === '2026-05-29 10:00:00'),
+                self::callback(static fn (array $cond): bool => in_array('used_at IS NULL', $cond, true))
+            )
+            ->willReturn(2);
+        $this->resource->method('getConnection')->willReturn($connection);
+        $this->resource->method('getMainTable')->willReturn('muon_passwordless_login_token');
+        $this->dateTime->method('gmtDate')->willReturn('2026-05-29 10:00:00');
+
+        $this->subject->markSupersededByCustomerId(42);
+    }
 }

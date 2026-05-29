@@ -135,6 +135,36 @@ class TokenRepository implements TokenRepositoryInterface
     }
 
     /**
+     * Mark all unused tokens for the given customer as superseded (consumed).
+     *
+     * @param int $customerId
+     * @return void
+     * @throws \Magento\Framework\Exception\CouldNotSaveException
+     */
+    public function markSupersededByCustomerId(int $customerId): void
+    {
+        try {
+            $connection = $this->resource->getConnection();
+            $tableName  = $this->resource->getMainTable();
+            $now        = $this->dateTime->gmtDate('Y-m-d H:i:s');
+
+            $connection->update(
+                $tableName,
+                [TokenInterface::USED_AT => $now],
+                [
+                    TokenInterface::CUSTOMER_ID . ' = ?' => $customerId,
+                    'used_at IS NULL',
+                ]
+            );
+        } catch (\Exception $e) {
+            throw new CouldNotSaveException(
+                __('Could not supersede tokens: %1', $e->getMessage()),
+                $e
+            );
+        }
+    }
+
+    /**
      * Delete all expired tokens and all consumed tokens.
      *
      * @return void
