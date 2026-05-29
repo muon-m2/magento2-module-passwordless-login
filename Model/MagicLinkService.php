@@ -185,7 +185,6 @@ class MagicLinkService implements MagicLinkServiceInterface
      * @param int    $lifetime
      *
      * @return void
-     * @throws \Magento\Framework\Exception\LocalizedException
      */
     private function dispatchEmail(string $email, string $customerName, string $magicLink, int $lifetime): void
     {
@@ -210,11 +209,13 @@ class MagicLinkService implements MagicLinkServiceInterface
 
             $transport->sendMessage();
         } catch (\Exception $e) {
+            // Log transport failures but do not surface them to the caller. A distinguishable
+            // error on a registered address would defeat the anti-enumeration guarantee: the
+            // request controller always shows the same generic message regardless of outcome (M-1).
             $this->logger->error(
                 'Muon_PasswordlessLogin: failed to send magic link email.',
                 ['exception' => $e, 'email_hash' => hash('sha256', $email)],
             );
-            throw new LocalizedException(__('Unable to send the login link. Please try again later.'), $e);
         }
     }
 }

@@ -18,7 +18,8 @@ interface MagicLinkServiceInterface
      *
      * @param string $email
      * @return void
-     * @throws \Magento\Framework\Exception\LocalizedException On mail transport failure.
+     * @throws \Magento\Framework\Exception\LocalizedException On token persistence failure.
+     *         Mail transport failures are logged, not thrown, to preserve anti-enumeration.
      */
     public function sendLink(string $email): void;
 

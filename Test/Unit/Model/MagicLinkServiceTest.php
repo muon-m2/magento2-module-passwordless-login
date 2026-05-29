@@ -308,4 +308,45 @@ class MagicLinkServiceTest extends TestCase
 
         $this->subject->sendLink('customer@example.com');
     }
+
+    public function testRegressionMailFailureDoesNotThrowOrLeak(): void
+    {
+        $this->config->method('isEnabled')->willReturn(true);
+        $this->config->method('getMaxAttempts')->willReturn(5);
+        $this->config->method('getTokenLifetime')->willReturn(15);
+        $this->dateTime->method('gmtDate')->willReturn('2026-05-29 10:00:00');
+
+        $customer = $this->createMock(CustomerInterface::class);
+        $customer->method('getId')->willReturn('42');
+        $customer->method('getFirstname')->willReturn('Jane');
+        $this->customerRepository->method('get')->willReturn($customer);
+        $this->tokenRepository->method('countRecentByCustomerId')->willReturn(0);
+
+        $token = $this->createMock(Token::class);
+        $token->method('setCustomerId')->willReturnSelf();
+        $token->method('setToken')->willReturnSelf();
+        $token->method('setExpiresAt')->willReturnSelf();
+        $this->tokenFactory->method('create')->willReturn($token);
+
+        $store = $this->createMock(StoreInterface::class);
+        $store->method('getId')->willReturn(1);
+        $this->storeManager->method('getStore')->willReturn($store);
+        $this->url->method('getUrl')->willReturn('https://example.com/passwordlesslogin/login/authenticate?token=abc');
+
+        $this->transportBuilder->method('setTemplateIdentifier')->willReturnSelf();
+        $this->transportBuilder->method('setTemplateOptions')->willReturnSelf();
+        $this->transportBuilder->method('setTemplateVars')->willReturnSelf();
+        $this->transportBuilder->method('setFromByScope')->willReturnSelf();
+        $this->transportBuilder->method('addTo')->willReturnSelf();
+
+        $transport = $this->createMock(TransportInterface::class);
+        $transport->method('sendMessage')->willThrowException(new \RuntimeException('SMTP down'));
+        $this->transportBuilder->method('getTransport')->willReturn($transport);
+
+        // Transport failure must be logged but NOT surfaced to the caller: a distinguishable
+        // error on a registered address would defeat the anti-enumeration guarantee (M-1).
+        $this->logger->expects($this->once())->method('error');
+
+        $this->subject->sendLink('customer@example.com');
+    }
 }
