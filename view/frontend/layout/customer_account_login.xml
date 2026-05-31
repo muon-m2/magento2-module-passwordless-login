@@ -5,9 +5,10 @@
         <css src="Muon_PasswordlessLogin::css/passwordlesslogin.css"/>
     </head>
     <body>
-        <referenceContainer name="form.additional.info">
+        <referenceContainer name="customer.login.container">
             <block class="Magento\Framework\View\Element\Template"
                    name="passwordlesslogin.link"
+                   after="customer.new"
                    template="Muon_PasswordlessLogin::login/link.phtml"/>
         </referenceContainer>
     </body>

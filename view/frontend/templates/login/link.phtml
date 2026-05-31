@@ -1,7 +1,22 @@
 <?php
 /** @var \Magento\Framework\View\Element\Template $block */
+/** @var \Magento\Framework\Escaper $escaper */
 ?>
-<a class="action passwordless-login"
-   href="<?= $escaper->escapeUrl($block->getUrl('passwordlesslogin/login/request')) ?>">
-    <span><?= $escaper->escapeHtml(__('Login without password')) ?></span>
-</a>
+<div class="block block-customer-login block-passwordless-login">
+    <div class="block-title">
+        <strong id="block-passwordless-login-heading" role="heading" aria-level="2">
+            <?= $escaper->escapeHtml(__('Login Without Password')) ?>
+        </strong>
+    </div>
+    <div class="block-content" aria-labelledby="block-passwordless-login-heading">
+        <p><?= $escaper->escapeHtml(__('Enter your email address and we will send you a one-time login link.')) ?></p>
+        <div class="actions-toolbar">
+            <div class="primary">
+                <a class="action primary action-passwordless-request"
+                   href="<?= $escaper->escapeUrl($block->getUrl('passwordlesslogin/login/request')) ?>">
+                    <span><?= $escaper->escapeHtml(__('Login without password')) ?></span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
