@@ -9,6 +9,7 @@
             <block class="Magento\Framework\View\Element\Template"
                    name="passwordlesslogin.link"
                    after="customer.new"
+                   ifconfig="muon_passwordlesslogin/general/enabled"
                    template="Muon_PasswordlessLogin::login/link.phtml"/>
         </referenceContainer>
     </body>
