@@ -10,6 +10,7 @@
 "Could not save token: %1","Could not save token: %1"
 "Token not found.","Token not found."
 "Could not delete unused tokens: %1","Could not delete unused tokens: %1"
+"Could not supersede tokens: %1","Could not supersede tokens: %1"
 "Could not delete expired tokens: %1","Could not delete expired tokens: %1"
 "Confirm Sign In","Confirm Sign In"
 "Click the button below to complete your sign in.","Click the button below to complete your sign in."
