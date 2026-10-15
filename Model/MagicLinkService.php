@@ -31,9 +31,6 @@ class MagicLinkService implements MagicLinkServiceInterface
 {
     private const EMAIL_TEMPLATE_ID = 'muon_passwordlesslogin_magic_link';
 
-    /** Number of seconds in the rate-limit sliding window (1 hour). */
-    private const RATE_LIMIT_WINDOW_SECONDS = 3600;
-
     /**
      * @param \Magento\Customer\Api\CustomerRepositoryInterface    $customerRepository
      * @param \Muon\PasswordlessLogin\Api\TokenRepositoryInterface $tokenRepository
@@ -85,7 +82,7 @@ class MagicLinkService implements MagicLinkServiceInterface
 
         $windowStart = $this->dateTime->gmtDate(
             'Y-m-d H:i:s',
-            time() - self::RATE_LIMIT_WINDOW_SECONDS
+            time() - Config::RATE_LIMIT_WINDOW_SECONDS
         );
         $recentCount = $this->tokenRepository->countRecentByCustomerId((int)$customer->getId(), $windowStart);
 

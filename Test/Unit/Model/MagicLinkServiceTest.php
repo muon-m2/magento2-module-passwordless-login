@@ -23,9 +23,11 @@ use Muon\PasswordlessLogin\Model\TokenFactory;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
+use RuntimeException;
 
 /**
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ * @SuppressWarnings(PHPMD.TooManyPublicMethods) A test class's public methods are its test cases.
  */
 class MagicLinkServiceTest extends TestCase
 {
@@ -340,7 +342,7 @@ class MagicLinkServiceTest extends TestCase
         $this->transportBuilder->method('addTo')->willReturnSelf();
 
         $transport = $this->createMock(TransportInterface::class);
-        $transport->method('sendMessage')->willThrowException(new \RuntimeException('SMTP down'));
+        $transport->method('sendMessage')->willThrowException(new RuntimeException('SMTP down'));
         $this->transportBuilder->method('getTransport')->willReturn($transport);
 
         // Transport failure must be logged but NOT surfaced to the caller: a distinguishable

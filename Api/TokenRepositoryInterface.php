@@ -76,7 +76,9 @@ interface TokenRepositoryInterface
     public function markSupersededByCustomerId(int $customerId): void;
 
     /**
-     * Delete all expired tokens and all consumed tokens.
+     * Delete expired and consumed tokens created before the rate-limit window.
+     *
+     * Rows inside the window are kept, expired or not, because the per-hour rate limit counts them.
      *
      * @return void
      * @throws \Magento\Framework\Exception\CouldNotDeleteException

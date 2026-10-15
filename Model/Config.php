@@ -8,6 +8,13 @@ use Magento\Store\Model\ScopeInterface;
 
 class Config
 {
+    /**
+     * Rate-limit sliding window in seconds (1 hour).
+     *
+     * Shared by the limiter and the cleanup cron: cleanup must keep every row the limiter still counts.
+     */
+    public const RATE_LIMIT_WINDOW_SECONDS = 3600;
+
     private const XML_PATH_ENABLED        = 'muon_passwordlesslogin/general/enabled';
     private const XML_PATH_TOKEN_LIFETIME = 'muon_passwordlesslogin/general/token_lifetime';
     private const XML_PATH_MAX_ATTEMPTS   = 'muon_passwordlesslogin/general/max_attempts';

@@ -165,7 +165,11 @@ class TokenRepository implements TokenRepositoryInterface
     }
 
     /**
-     * Delete all expired tokens and all consumed tokens.
+     * Delete expired and consumed tokens that have aged out of the rate-limit window.
+     *
+     * Rows created inside the window are kept even when expired or consumed: countRecentByCustomerId()
+     * counts them, and a token outlives its 15-minute default lifetime well within the hour, so
+     * deleting them reset the per-hour limit on every hourly run.
      *
      * @return void
      * @throws \Magento\Framework\Exception\CouldNotDeleteException
@@ -173,13 +177,18 @@ class TokenRepository implements TokenRepositoryInterface
     public function deleteExpired(): void
     {
         try {
-            $connection = $this->resource->getConnection();
-            $tableName  = $this->resource->getMainTable();
-            $now        = $this->dateTime->gmtDate('Y-m-d H:i:s');
+            $connection  = $this->resource->getConnection();
+            $tableName   = $this->resource->getMainTable();
+            $now         = $this->dateTime->gmtDate('Y-m-d H:i:s');
+            $windowStart = $this->dateTime->gmtDate('Y-m-d H:i:s', time() - Config::RATE_LIMIT_WINDOW_SECONDS);
 
+            // Each array term is parenthesised and ANDed, so the OR stays grouped.
             $connection->delete(
                 $tableName,
-                '(expires_at < ' . $connection->quote($now) . ' OR used_at IS NOT NULL)'
+                [
+                    'created_at < ?' => $windowStart,
+                    'expires_at < ? OR used_at IS NOT NULL' => $now,
+                ]
             );
         } catch (\Exception $e) {
             throw new CouldNotDeleteException(__('Could not delete expired tokens: %1', $e->getMessage()), $e);
