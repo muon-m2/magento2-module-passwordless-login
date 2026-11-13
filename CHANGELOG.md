@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-13
+
+### Changed
+
+- The PHP constraint is pinned to the tested range, 8.3 to 8.5 (`~8.3.0 || ~8.4.0 || ~8.5.0`),
+  instead of the open `~8.3`. Tested on PHP 8.5 with Magento 2.4.9. No code changes.
+
 ## [1.1.0] - 2026-10-15
 
 ### Added
